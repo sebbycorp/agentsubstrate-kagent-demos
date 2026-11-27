@@ -35,6 +35,7 @@ writing a SandboxTemplate, and the agent can only pick a template that exists.
 | 3 | **Reproduce a bug from a ticket.** "It crashes since we upgraded." | `03-reproduce-a-bug/run.sh` | The same repro runs on two digest-pinned templates. Python 3.11 passes, Python 3.13 raises `ModuleNotFoundError`. |
 | 4 | **Claude Code runs its code in your cluster.** The agent loop stays on your laptop. | `04-claude-code/run.sh` | Claude Code reads a local CSV, runs the analysis in a Sandbox through kagent's MCP endpoint, and deletes the Sandbox. |
 | 5 | **Pi does the same.** Same task, same Sandbox, different harness. | `PI_MODEL=openai/gpt-4.1 05-pi/run.sh` | Pi answers the same question with the same numbers. |
+| 6 | **Prove the wall is real.** Try to connect to the pod that hosts sandboxes. | `06-isolation-test/run.sh` | Two ordinary pods time out. A control pod with the router's label connects. |
 
 Example 1 output:
 
@@ -62,6 +63,40 @@ By support tickets
 
 Sandbox used and deleted: 01a21d24-b7a4-742c-8894-91727d9a7bfe (final state RUNTIME_STATE_DELETED).
 ```
+
+## Is the isolation real?
+
+Four things separate a Sandbox from everything else, and none of them depend
+on the agent behaving:
+
+1. **A separate kernel.** gVisor by default, or a micro-VM for the `microvm` class.
+2. **Its own files.** The image and a `/data` volume. No node disk, no service account token.
+3. **One way in.** A NetworkPolicy admits only the Substrate router to the Worker pod.
+4. **No way out unless granted.** The egress gateway denies by default.
+
+Example 1 tests the second and fourth. Example 6 tests the third:
+
+```console
+== Pod in namespace default, no labels
+port 443: blocked (timed out)
+port 8443: blocked (timed out)
+port 8080: blocked (timed out)
+
+== Pod in namespace kagent, the same namespace as the worker
+port 443: blocked (timed out)
+port 8443: blocked (timed out)
+port 8080: blocked (timed out)
+
+== Control: pod in ate-system labeled app=atenet-router
+port 443: CONNECTED
+port 8443: CONNECTED
+port 8080: CONNECTED
+```
+
+The control proves the ports are open, so the timeouts are the policy at work.
+It also shows who you have to trust: anyone who can create pods in `ate-system`
+can wear the router's label. Not every CNI enforces NetworkPolicy, so run this
+on your own cluster. This result is from kind with its default `kindnet`.
 
 ## How does a person or an agent reach a Sandbox?
 

@@ -11,7 +11,10 @@ access that it gets, which is none unless you grant it.
 
 Once the template exists (step 3), see [`examples/`](examples/) for real-world
 scenarios: opening an untrusted file, checking agent-written code, reproducing
-a bug across pinned versions, and driving a Sandbox from Claude Code and Pi.
+a bug across pinned versions, driving a Sandbox from Claude Code and Pi, and
+testing that the isolation holds.
+
+The full write-up is on the blog: [Give Claude Code and Pi a sandbox](https://maniak.io/articles/2026-11-27-kagent-sandbox-templates-claude-code-pi-harness/).
 
 ## Prerequisites
 
