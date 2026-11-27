@@ -11,7 +11,7 @@ access that it gets, which is none unless you grant it.
 
 Once the template exists (step 3), see [`examples/`](examples/) for real-world
 scenarios: opening an untrusted file, checking agent-written code, reproducing
-a bug across pinned versions, and connecting your own bot such as Grok.
+a bug across pinned versions, and driving a Sandbox from Claude Code and Pi.
 
 ## Prerequisites
 

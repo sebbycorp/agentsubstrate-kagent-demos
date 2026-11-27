@@ -33,7 +33,8 @@ writing a SandboxTemplate, and the agent can only pick a template that exists.
 | 1 | **Open a file you do not trust.** A customer upload or a script from a ticket. | `01-untrusted-file/run.sh` | The script tries to phone home, read cloud metadata, reach the Kubernetes API, and find credentials. Every attempt is blocked. |
 | 2 | **Check code that an agent wrote.** Run the tests before a human reviews the PR, away from your CI secrets. | `02-check-ai-written-code/run.sh` | One test fails on an off-by-one bug. The script exits with the tests' exit code, so it works as a pipeline gate. |
 | 3 | **Reproduce a bug from a ticket.** "It crashes since we upgraded." | `03-reproduce-a-bug/run.sh` | The same repro runs on two digest-pinned templates. Python 3.11 passes, Python 3.13 raises `ModuleNotFoundError`. |
-| 4 | **Bring your own agent.** Grok, OpenAI, or any model with an OpenAI-compatible API. | `04-bring-your-own-agent/bot.py "your question"` | The model writes Python, the bot runs it in a Sandbox through kagent's MCP endpoint, and deletes the Sandbox. |
+| 4 | **Claude Code runs its code in your cluster.** The agent loop stays on your laptop. | `04-claude-code/run.sh` | Claude Code reads a local CSV, runs the analysis in a Sandbox through kagent's MCP endpoint, and deletes the Sandbox. |
+| 5 | **Pi does the same.** Same task, same Sandbox, different harness. | `PI_MODEL=openai/gpt-4.1 05-pi/run.sh` | Pi answers the same question with the same numbers. |
 
 Example 1 output:
 
@@ -45,21 +46,21 @@ Example 1 output:
 [blocked] find credentials in env vars: LookupError: no credentials in the environment
 ```
 
-Example 4 output:
+Examples 4 and 5 give both harnesses the same task, in [`task.md`](task.md):
+"what drove churn last quarter?" with the data in a local `churn.csv`. Output
+from the Claude Code run:
 
 ```console
-> What is the 50th Fibonacci number, and how many digits does 2**1000 have?
+By plan
+  starter                customers= 36 churned= 17 churn_rate= 47.2%
+  team                   customers= 15 churned=  0 churn_rate=  0.0%
+  enterprise             customers=  9 churned=  1 churn_rate= 11.1%
 
-  tool  create_sandbox("namespace": "kagent", "template": "python", ...)
-  tool  write_sandbox_file("sandbox_id": "01a21d0e-...", "path": "main.py", "text": "def fibonacci(n):...")
-  tool  start_sandbox_process("sandbox_id": "01a21d0e-...", "command": ["python3", "main.py"])
-  tool  get_sandbox_process(...)
-  tool  read_sandbox_outputs(...)
-  out   50th Fibonacci number: 12586269025
-        Number of digits in 2**1000: 302
-  tool  delete_sandbox("sandbox_id": "01a21d0e-...")
+By support tickets
+  5+ tickets             customers= 32 churned= 15 churn_rate= 46.9%
+  <5 tickets             customers= 28 churned=  3 churn_rate= 10.7%
 
-The 50th Fibonacci number is 12,586,269,025, and the number 2^1000 has 302 digits.
+Sandbox used and deleted: 01a21d24-b7a4-742c-8894-91727d9a7bfe (final state RUNTIME_STATE_DELETED).
 ```
 
 ## How does a person or an agent reach a Sandbox?
@@ -72,52 +73,63 @@ identity.
 | --- | --- | --- |
 | A person, a script, a CI job | `kagent sandbox` CLI | `create`, `exec`, `upload`, `download`, `suspend`, `resume`, `delete`. Examples 1 to 3 use this. |
 | A kagent agent in the cluster | MCP tools from the built-in `kagent-api` server | Bind the sandbox tools in the AgentTemplate. See [`manifests/agent-code-runner.yaml`](../manifests/agent-code-runner.yaml). |
-| An outside agent or bot (Grok, a Slack bot, your own app) | MCP over HTTP at `/mcp` | Any tool-calling model works. Example 4 is a complete client in about 150 lines with no dependencies. |
-| A coding assistant (Claude Code, Cursor, Codex) | MCP over HTTP at `/mcp` | Register the URL as an MCP server. See below. |
+| A coding harness on your machine (Claude Code, Pi, Codex, Cursor) | MCP over HTTP at `/mcp` | Register the URL as an MCP server. Examples 4 and 5, and the section below. |
+| Any other bot or app with a tool-calling model | MCP over HTTP at `/mcp` | The same endpoint. It is plain JSON-RPC over HTTP. |
 | Your own application | gRPC `kagent.api.v1.SandboxService` | For files over 1 MiB, which the MCP tools cannot move. |
 
-### Connect a bot such as Grok
+### Connect Claude Code or Pi
 
-Expose the controller, then point the bot at it:
+Both need the controller reachable first:
 
 ```bash
 kubectl port-forward -n kagent svc/kagent-controller 8083:8083 &
-
-export XAI_API_KEY=...          # or OPENAI_API_KEY
-export LLM_MODEL=<model name>   # required for Grok; defaults to gpt-4o for OpenAI
-./04-bring-your-own-agent/bot.py "How many prime numbers are there below 10,000?"
 ```
 
-The bot was tested with OpenAI `gpt-4o`. Grok uses the same chat API, at
-`https://api.x.ai/v1`, but that path has not been run here.
-
-What [`bot.py`](04-bring-your-own-agent/bot.py) does, which is what any
-integration has to do:
-
-1. Calls `tools/list` on `/mcp` and keeps only the eight sandbox tools. The model
-   never sees the tools that manage agents and Sessions.
-2. Hands those tool schemas to the model and runs the tool-calling loop.
-3. Translates plain text to base64 for file writes and back for process output,
-   because models make mistakes when they encode base64 themselves.
-4. Deletes any Sandbox the model created and forgot, so nothing is left running.
-
-### Connect a coding assistant
+**Claude Code.** For everyday use, register the server once:
 
 ```bash
-claude mcp add --transport http kagent http://localhost:8083/mcp   # Claude Code
-codex mcp add kagent --url http://localhost:8083/mcp               # Codex
+claude mcp add --transport http kagent http://localhost:8083/mcp
 ```
 
 Then ask in plain language: "Use the kagent sandbox tools to run this script in
 a temporary sandbox from the python template in the kagent namespace, report
 the output, and delete the sandbox."
 
+[`04-claude-code/run.sh`](04-claude-code/run.sh) does it headless and locked
+down instead. It loads only [`mcp.json`](04-claude-code/mcp.json), and it gives
+Claude Code the `Read` tool and the nine sandbox tools, with no Bash, Edit, or
+Write. Claude Code cannot run the analysis on your machine even if it tried.
+
+**Pi.** Pi reads project MCP servers from `.pi/mcp.json`, which is checked in at
+[`05-pi/.pi/mcp.json`](05-pi/.pi/mcp.json). To create one yourself:
+
+```bash
+pi mcp add kagent --url http://localhost:8083/mcp -l --exposure direct
+```
+
+[`05-pi/run.sh`](05-pi/run.sh) runs Pi headless with its bash, edit, and write
+tools excluded. Four things that cost time to find:
+
+- Pi ignores `.pi/mcp.json` until the folder is trusted. `--approve` trusts it for one run.
+- `--exposure direct` declares the tools to the model like built-in tools. The
+  default, `codemode`, only makes them callable from scripts.
+- `pi -p` waits on stdin when it is not a terminal. Redirect it from `/dev/null`
+  in a script, or the run hangs silently.
+- Pi's default model is whatever your Pi settings say. Set `PI_MODEL` to pick one.
+
+**What both runs taught us about the task prompt.** The first Pi run, on
+`gpt-4.1`, failed: the model hand-encoded base64 for `write_sandbox_file`, got
+it wrong, gave up, and left a Sandbox running. [`task.md`](task.md) now tells
+the model to create files with a shell heredoc through `start_sandbox_process`,
+and to delete the Sandbox even when a step fails. Both harnesses pass with that
+wording. Claude Code had chosen the heredoc route on its own.
+
 ## Before you expose this beyond your laptop
 
 - **Turn on authentication.** By default the controller runs in `insecure`
   mode, where a caller names its own identity. Anyone who can reach port `8083`
   can create Sandboxes. With auth on, clients send `Authorization: Bearer <token>`
-  (`bot.py` reads it from `KAGENT_TOKEN`).
+  (`claude mcp add --header`, or `pi mcp add --bearer-token-env-var`).
 - **Keep templates narrow.** One template per job, each with only the egress it
   needs. A bot that analyzes data does not need the template that can reach PyPI.
 - **Keep lifetimes short.** A Sandbox that a bot forgets lives until its TTL.

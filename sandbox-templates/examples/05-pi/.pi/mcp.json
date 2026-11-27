@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "kagent": {
+      "url": "http://localhost:8083/mcp",
+      "exposure": "direct",
+      "description": "kagent Sandboxes: run commands and files in an isolated sandbox in the cluster"
+    }
+  }
+}
