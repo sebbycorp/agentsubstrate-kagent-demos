@@ -9,6 +9,10 @@ or an agent can create to run commands. A **SandboxTemplate** defines what is
 inside it: a digest-pinned image, the WorkerPool that runs it, and the network
 access that it gets, which is none unless you grant it.
 
+Once the template exists (step 3), see [`examples/`](examples/) for real-world
+scenarios: opening an untrusted file, checking agent-written code, reproducing
+a bug across pinned versions, and connecting your own bot such as Grok.
+
 ## Prerequisites
 
 - Docker Desktop (8 GB of memory is enough; the cluster idles at about 2.7 GB)
