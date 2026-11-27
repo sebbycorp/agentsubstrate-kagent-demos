@@ -3,7 +3,7 @@
 A local kagent 1.0 + Agent Substrate environment in a kind cluster, with
 runnable demos of standalone Sandboxes, egress policies, and agentgateway.
 
-Based on the kagent docs: [Set up a sandbox template](https://kagent.dev/docs/kagent/latest/get-started/sandbox-template/),
+Based on the kagent docs: [Set up sandbox templates](https://kagent.dev/docs/kagent/latest/sandboxes/templates/),
 [Run commands with the CLI](https://kagent.dev/docs/kagent/latest/sandboxes/cli/),
 [Egress policies](https://kagent.dev/docs/kagent/latest/agents/egress-policies/), and
 [agentgateway model routing](https://kagent.dev/docs/kagent/latest/setup/model-providers/byo-agentgateway/).
