@@ -1,0 +1,11 @@
+apiVersion: api.kagent.dev/v1alpha3
+kind: ModelConfig
+metadata:
+  name: agentgateway-model-config
+  namespace: kagent
+spec:
+  model: gpt-4o-mini
+  provider: OpenAI
+  openAI:
+    # The /v1 suffix is required. kagent appends /chat/completions.
+    baseUrl: http://agentgateway-proxy.agentgateway-system.svc.cluster.local/v1

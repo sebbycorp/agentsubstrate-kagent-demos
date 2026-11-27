@@ -1,0 +1,27 @@
+# The resource name is the model name that kagent sends. The provider key
+# lives here, at the gateway, so no agent and no sandbox ever holds it.
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayModel
+metadata:
+  name: gpt-4o-mini
+  namespace: agentgateway-system
+spec:
+  parentRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: agentgateway-proxy
+    sectionName: http
+  provider: OpenAI
+  policies:
+    auth:
+      secretRef:
+        name: openai-key
+    # Mask, not Reject: a rejected turn ends an agent conversation for good.
+    promptGuard:
+      request:
+      - regex:
+          builtins:
+          - Email
+          - Ssn
+          - CreditCard
+          action: Mask

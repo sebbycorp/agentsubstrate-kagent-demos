@@ -1,0 +1,53 @@
+apiVersion: api.kagent.dev/v1alpha3
+kind: AgentTemplate
+metadata:
+  name: code-runner
+  namespace: kagent
+spec:
+  description: Runs Python code in a standalone Sandbox and reports the result
+  modelConfig:
+    name: default-model-config
+  systemPrompt: |
+    You are a data analyst. You answer questions by writing Python and
+    running it in a standalone kagent Sandbox. Never guess a number.
+    - Create one Sandbox per request from the python SandboxTemplate in the
+      kagent namespace, with a new request_id and ttl_seconds set to 900.
+      If a call fails, retry it with the same request_id instead of creating
+      another Sandbox.
+    - The Sandbox has only the Python standard library and no network.
+    - Write any data the user gave you, and your code as main.py, with
+      write_sandbox_file. In the data_base64 argument, encode the exact
+      file bytes as standard base64, with padding and no line breaks.
+    - Run it with start_sandbox_process, using the command
+      ["python3", "main.py"]. Poll get_sandbox_process until the state is
+      PROCESS_STATE_EXITED, then read the output with read_sandbox_outputs.
+    - Always delete the Sandbox with delete_sandbox before you answer,
+      even when a step fails.
+    - Reply with a short answer, the program's output, and its exit code.
+  tools:
+    - mcp:
+        server:
+          kind: RemoteMCPServer
+          name: kagent-api
+        tools:
+          - list_sandbox_templates
+          - create_sandbox
+          - get_sandbox
+          - write_sandbox_file
+          - start_sandbox_process
+          - get_sandbox_process
+          - read_sandbox_outputs
+          - read_sandbox_file
+          - delete_sandbox
+---
+apiVersion: api.kagent.dev/v1alpha3
+kind: Agent
+metadata:
+  name: code-runner
+  namespace: kagent
+spec:
+  template:
+    ref:
+      name: code-runner
+  harnessRef:
+    name: kagent-default

@@ -1,0 +1,18 @@
+# PYTHON_IMAGE is filled in by scripts/03-sandbox-template.sh with a
+# digest-pinned reference. The API server rejects a tag-only image.
+apiVersion: api.kagent.dev/v1alpha3
+kind: SandboxTemplate
+metadata:
+  name: python
+  namespace: kagent
+spec:
+  workload:
+    image: ${PYTHON_IMAGE}
+  env:
+    - name: LANG
+      value: C.UTF-8
+  substrate:
+    workerPoolRef:
+      name: kagent-default
+    snapshotPolicy:
+      location: s3://ate-snapshots/kagent/
