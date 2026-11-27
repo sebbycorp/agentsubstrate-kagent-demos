@@ -1,0 +1,8 @@
+# Recorded videos stay local. Re-create with: vhs video/demo.tape
+*.mp4
+*.mov
+*.webm
+*.gif
+
+# macOS
+.DS_Store
