@@ -1,0 +1,11 @@
+# Grants exactly two origins. Everything else stays unresolvable from
+# inside the Sandbox.
+apiVersion: api.kagent.dev/v1alpha3
+kind: EgressPolicy
+metadata:
+  name: pypi
+  namespace: kagent
+spec:
+  destinations:
+    - origin: https://pypi.org
+    - origin: https://files.pythonhosted.org

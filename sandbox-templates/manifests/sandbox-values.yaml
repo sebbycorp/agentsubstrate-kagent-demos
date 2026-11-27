@@ -1,0 +1,9 @@
+# Turns on Sandboxes. The chart ships no default guest image, so a
+# SandboxTemplate never becomes Ready until this is set.
+config:
+  sandboxes:
+    guestImage: ghcr.io/kagent-dev/kagent/sandbox-guest@sha256:354825706868fc4d39300fe7795f4fa04d1eb53c3c93fb5b65b5da76f8222db7
+    cpu: "1"
+    memory: 1Gi
+    defaultTtl: 3600s
+    maxTtl: 86400s
