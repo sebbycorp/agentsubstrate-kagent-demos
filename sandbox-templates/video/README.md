@@ -1,8 +1,9 @@
 # Demo video
 
-[`sandbox-demo.mp4`](sandbox-demo.mp4) is a terminal recording, a little over
-three minutes long, that goes from "kagent is installed" to Pi running code in
-a sandbox. Nothing in it is simulated: the recorder types each command into a
+`sandbox-demo.mp4` is a terminal recording, a little over three minutes long,
+that goes from "kagent is installed" to Pi running code in a sandbox. The video
+file is not checked in (see the root `.gitignore`); record it with the steps
+below. Nothing in it is simulated: the recorder types each command into a
 real shell and waits for it to finish.
 
 Each scene opens with a full-screen card that says what is about to happen,
